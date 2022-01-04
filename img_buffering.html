@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script>
+</script>
+</head>
+<body onload = "load_img()"> <!-- onload = "load_img()"> -->
+<h3>przegladarka obrazkow ladujaca obrazki dopiero gdy przegladane</h3>
+<input type="text" id="t_nr_obrazka" value="0">
+<input type="button" id="b_nr_obrazka" value="[enter]" onclick="getNrObrazka();">
+<div id="przegladarka">
+  <input type="button" id="b_prev" value="prev" onclick="prev()">  
+  <input type="button" id="b_next" value="next" onclick="next()">
+  <hr>
+  <div style = "border:solid;" id="obrazek"  >
+  </div>
+  <div style = "border:solid;" id="obrazek_ukryty">
+  </div>  
+</div>
+<script src="./img_lazy_loading.js">
+</script>
+</body>
+</html>
