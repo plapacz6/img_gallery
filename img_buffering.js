@@ -225,7 +225,7 @@ async function pobierz_img(imgIdx1, decoding='async'){
   return pobierz_img;
 }
 
-async function load_img() {
+function load_img() {
   console.log({img_idx});
   let nazwa_obrazka = document.createElement('p');
   nazwa_obrazka.style.fontFamily = "Helvetica";
@@ -233,19 +233,20 @@ async function load_img() {
   nazwa_obrazka.innerHTML = tbl_img.img[img_idx][idx_big];
   obrazek.appendChild(nazwa_obrazka);
 
-  try {
-    const img2 = new Promise((resolve, reject) => {      
-      resolve(pobierz_img(img_idx, 'sync'));      
-    });
-    obrazek.appendChild( await img2 );        
-
-    img_load_async(img_idx, 2, 2);
-    console.log("loag_img"); 
-  }
-  catch(err){
-    console.log({err});
-  }
+  const img2 = new Promise((resolve, reject) => {      
+    pobierz_img(img_idx, 'sync').then(
+      (val) => {resolve(val);}
+    );    
+  });
+  img2.then((val) => {
+    console.log('val: ', val);
+    obrazek.appendChild(val); //TODO: !!!!! problem
+  })
+  .then(async () => { await img_load_async(img_idx, 2, 2)} )
+  .catch(console.log('loag_img: err'));
+  console.log("loag_img");     
 }
+
 
 function next(){
   img_idx = (tbl_img.img.length -1) == img_idx ? img_idx = 0: img_idx += 1;
