@@ -73,15 +73,26 @@ const tbl_img = {
   loadImg: async function (idx, decoding='async') {
     this.img[idx][idxImg] = document.createElement('img');
     this.img[idx][idxImg].decoding = decoding; //'sync';
+    this.img[idx][idxImg].src = this.long_url + this.img[idx][idxBig];
+
     const loadedImg = new Promise((resolve, reject) => {
+      this.img[idx][idxImg].onload = () => {              
+          console.log('loadImg: ',this);
+          this.img[idx][idxLoaded] = 1;
+          resolve(this.img[idx][idxImg]);       
+      };
+      this.img[idx][idxImg].onerror = () => {
+        reject(new Error('nie mozna pobrac obrazka'));
+      };
+      /*
       this.img[idx][idxImg].onload = resolve(
         (console.log('loadImg: ',this),
         (this.img[idx][idxLoaded] = 1),  //comma operator
         this.img[idx][idxImg])        
       ); //.bind(this);  //bez tego this tez dobrze wskazuje
       this.img[idx][idxImg].onerror = reject; //TODO: nie wiem czy to dziala 
-    });
-    this.img[idx][idxImg].src = this.long_url + this.img[idx][idxBig];
+      */
+    });    
     return loadedImg;        
   },
 
@@ -89,14 +100,13 @@ const tbl_img = {
     const loadedImg = new Promise((resolve, reject) => {
       if( ! this.img[idx][idxLoaded]){
         if( this.img[idx][idxImg] === 0){          
-          try {
-            console.log('getImg: ', this);
-            resolve(this.loadImg(idx, decoding));
-          }
-          catch(err){
-            console.log('getImg:', {err});
-            reject;
-          }      
+          console.log('getImg: ', this);
+          this.loadImg(idx, decoding)
+          .then((val) => {resolve(val);})
+          .catch( (err) => {
+            console.log('getImg:', err);
+            reject(new Error('getImg: nie moge uzyskac obrazu z loadImg'));
+          });
         }
         else {
           console.log('ERR: get: img gotowy, aa loaded nadal False');
@@ -155,7 +165,7 @@ async function imgs_load(currImgIdx, maxLeft, maxRight){
   return 0;
 }
 
-//recurrent loading number of images
+//recurrent loading number of images 
 const load_next_img = (curr, maxD, stepD) => { 
   
   if(maxD <= 0) return;
@@ -167,35 +177,37 @@ const load_next_img = (curr, maxD, stepD) => {
   if(stepD < 0){
     curr = (0 == curr) ? curr = (tbl_img.img.length - 1): curr -= 1;
   }
-  try{
-    if(tbl_img.img[curr][idxLoaded] === 1) {
-      load_next_img(curr, maxD - 1, stepD)
-    }
-    else{
-      let next_img = document.createElement("img");
-      next_img.alt = tbl_img.img[curr][idx_big];
-      next_img.width = "100";
-      next_img.height = "100";
-      next_img.style.maxWidth = "100px"; 
-      next_img.style.maxHeight = "100px"; 
-      hiddenImgDiv.appendChild(next_img);
-      //next_img.src= long_url + tbl_img.img[curr][idx_small];   //TODO: zastapic funkcja do tworzenia sciezki
-      //https://stackoverflow.com/questions/12354865/image-onload-event-and-browser-cache
-      try {
-        console.log("image ", tbl_img.img[curr][idxBig], " start loading");        
-        next_img.onload = load_next_img(curr, maxD - 1, stepD);
-      }
-      catch(err){
-        console.log('next_img.onload = :', {err});
-      }
-      next_img.src= long_url + tbl_img.img[curr][idx_small];   //TODO: zastapic funkcja do tworzenia sciezki
-      tbl_img.img[curr][idxLoaded] = 1; 
+  
+  if(tbl_img.img[curr][idxLoaded] === 1) {
+    load_next_img(curr, maxD - 1, stepD)
+  }
+  else{
+    console.log("image ", tbl_img.img[curr][idxBig], " start loading");        
+    tbl_img.getImg(curr, 'sync')
+    .then( (img1) => {
+      //dla celow wizualizacji buforwoania - to nie jest powtarzane w pobierz_img(), bo tu tylko buforowanie      
+      //a tam wyswietlanie w glownym obrazku
+      /* (???) bardzo dziwnie zachowuje sie ten 
+         hiddenImgDiv
+         obrazki pojawiaja sie i znikaja, czy to znczy usuwanie z pamieci czy tylko jakis blad wyswietlania
+      */
+      img1.alt = tbl_img.img[curr][idx_big];
+      img1.width = "100";
+      img1.height = "100";
+      img1.style.maxWidth = "100px"; 
+      img1.style.maxHeight = "100px";       
+      hiddenImgDiv.appendChild(img1);      
+      //koniec wizualizacji buforowania
+      load_next_img(curr, maxD - 1, stepD);
       console.log("image ", tbl_img.img[curr][idxBig], " loaded");
-    }
-  }
-  catch(err){
-    console.log('load_next_img: ', {err});    
-  }
+    })
+    .catch((err) => {
+      console.log('load_next_img: ', err);
+      return new Error('load_next_img: nie moge pobrac obrazka');
+    })
+        
+    //https://stackoverflow.com/questions/12354865/image-onload-event-and-browser-cache    
+  } //else  
   return 0;    
 }
 
@@ -207,22 +219,24 @@ let img_idx = Number(document.getElementById("t_nr_obrazka").value);
 let obrazek = document.getElementById("obrazek");
 
 async function pobierz_img(imgIdx1, decoding='async'){
-  const pobranyImg = new Promise((resolve, reject) => {
-    try {
-      const img_1 = tbl_img.getImg(imgIdx1, decoding);
-      img_1.alt=tbl_img.img[imgIdx1][idxBig];
-      img_1.width = "100";
-      img_1.height = "100";
-      img_1.style.maxWidth = "100px";
-      img_1.style.maxHeight = "100px";  
-      resolve( img_1 );
-    }
-    catch(err){
+  const pobranyImg = new Promise((resolve, reject) => {    
+    tbl_img.getImg(imgIdx1, decoding)
+    .then((img_1) => {
+        img_1.alt=tbl_img.img[imgIdx1][idxBig];
+        img_1.width = "100";
+        img_1.height = "100";
+        img_1.style.maxWidth = "100px";
+        img_1.style.maxHeight = "100px";  
+        resolve( img_1 );
+      }
+    )
+    .catch((err) => {
       console.log('pobierz_img: ', err);
-      reject;
-    }  
+      reject(new Error('pobierz_img: nie moge pobrac obrazka'));
+      }
+    )     
   });
-  return pobierz_img;
+  return pobranyImg;
 }
 
 function load_img() {
@@ -234,41 +248,57 @@ function load_img() {
   obrazek.appendChild(nazwa_obrazka);
 
   const img2 = new Promise((resolve, reject) => {      
-    pobierz_img(img_idx, 'sync').then(
+    pobierz_img(img_idx, 'sync')
+    .then(
       (val) => {resolve(val);}
-    );    
+    ) 
+    .catch( (err) => {resolve(new Error('load_img: nie moge pobrac obrazka'));});
   });
   img2.then((val) => {
     console.log('val: ', val);
     obrazek.appendChild(val); //TODO: !!!!! problem
   })
-  .then(async () => { await img_load_async(img_idx, 2, 2)} )
-  .catch(console.log('loag_img: err'));
+  .then(
+    () => {img_load_async(img_idx, 2, 2)}
+  )
+  .catch((err) => {
+    console.log('loag_img: err');
+    resolve(new Error('load_img: 2 - nie moge pobrac obrazka'));
+    }
+  );
   console.log("loag_img");     
 }
 
 
 function next(){
   img_idx = (tbl_img.img.length -1) == img_idx ? img_idx = 0: img_idx += 1;
-  console.log('next: ', img_idx)
-  obrazek.replaceChild(pobierz_img(img_idx), obrazek.lastChildd);
+  console.log('next: ', img_idx);
+  pobierz_img(img_idx)
+  .then((img1) => {
+    obrazek.replaceChild(img1, obrazek.lastChild);
+  })
+  .catch((err) => {new Error("next: nie moge pobrac obrazka");});
   obrazek.firstChild.innerHTML = tbl_img.img[img_idx][idx_big];
   
-  img_load_async(img_idx, 0, 38);  
+  img_load_async(img_idx, 0, 3);  
   console.log("next");
 }
 
-function prev(){
+function prev(){  
   img_idx = (0 == img_idx) ? img_idx = (tbl_img.img.length - 1): img_idx -= 1;
   console.log('prev: ', img_idx)
-  obrazek.replaceChild(pobierz_img(img_idx), obrazek.lastChild);
+  pobierz_img(img_idx)
+  .then((img1) => {
+    obrazek.replaceChild(img1, obrazek.lastChild);
+  })
+  .catch((err) => {new Error("next: nie moge pobrac obrazka");});
   obrazek.firstChild.innerHTML = tbl_img.img[img_idx][idx_big];
 
   img_load_async(img_idx, 3, 0);        
   console.log("prev");
 }
 
-function get1NrObrazka(){
+function getNrObrazka(){
   let nr =  Number(document.getElementById("t_nr_obrazka").value);
   console.log('text.value: :', {nr});
   img_idx = nr;
