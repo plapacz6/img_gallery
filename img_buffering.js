@@ -92,7 +92,7 @@ const tbl_img = {
       ); //.bind(this);  //bez tego this tez dobrze wskazuje
       this.img[idx][idxImg].onerror = reject; //TODO: nie wiem czy to dziala 
       */
-    });    
+    });        
     return loadedImg;        
   },
 
@@ -117,6 +117,7 @@ const tbl_img = {
         resolve(this.img[idx][idxImg]);
       }
     });
+    printTblLoadedImgs();    
     return loadedImg;
   },
 
@@ -133,6 +134,20 @@ const long_url = "https://adlap.github.io/Pielgrzymi/images/";
 // document.appendChild(divHdIm);
 // const hiddenImgDiv2 = gedElementByName("divHiddenImages");
 const hiddenImgDiv = document.getElementById("obrazek_ukryty");
+const listOfBufforedImg = document.getElementById("lista_zbuforowanych_obrazkow");
+
+function printTblLoadedImgs(){
+  try{
+    listOfBufforedImg.innerHTML = "";
+    tbl_img.img.forEach( (el) => {
+      //console.log("foreach.img: " , el[idxImg].toString());
+      listOfBufforedImg.innerHTML += (el[idxImg].toString() != "0" ? "1": "0" ) + ", ";
+    });
+  }
+  catch(err){
+    console.log('img.foreach: ', err);
+  }
+}
 
 /* variable to controll preloading images */
 
@@ -236,6 +251,9 @@ async function pobierz_img(imgIdx1, decoding='async'){
       }
     )     
   });
+
+
+
   return pobranyImg;
 }
 
