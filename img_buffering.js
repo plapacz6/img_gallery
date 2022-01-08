@@ -82,16 +82,8 @@ const tbl_img = {
           resolve(this.img[idx][idxImg]);       
       };
       this.img[idx][idxImg].onerror = () => {
-        reject(new Error('nie mozna pobrac obrazka'));
+        reject(new Error('loadImg err: nie mozna pobrac obrazka'));
       };
-      /*
-      this.img[idx][idxImg].onload = resolve(
-        (console.log('loadImg: ',this),
-        (this.img[idx][idxLoaded] = 1),  //comma operator
-        this.img[idx][idxImg])        
-      ); //.bind(this);  //bez tego this tez dobrze wskazuje
-      this.img[idx][idxImg].onerror = reject; //TODO: nie wiem czy to dziala 
-      */
     });        
     return loadedImg;        
   },
@@ -105,19 +97,19 @@ const tbl_img = {
           .then((val) => {resolve(val);})
           .catch( (err) => {
             console.log('getImg:', err);
-            reject(new Error('getImg: nie moge uzyskac obrazu z loadImg'));
+            reject(new Error('getImg: ', idx ,'nie moge uzyskac obrazu z loadImg'));
           });
         }
         else {
-          console.log('ERR: get: img gotowy, aa loaded nadal False');
-          reject;
+          console.log('getImg err:', idx ,' img gotowy, a loaded nadal False');
+          reject(new Error("getImg  err:", idx ," img gotowy, a loaded nadal False"));
         }
       }
       else {
         resolve(this.img[idx][idxImg]);
       }
     });
-    printTblLoadedImgs();    
+    printLoadedImgsTbl();    
     return loadedImg;
   },
 
@@ -136,7 +128,7 @@ const long_url = "https://adlap.github.io/Pielgrzymi/images/";
 const hiddenImgDiv = document.getElementById("obrazek_ukryty");
 const listOfBufforedImg = document.getElementById("lista_zbuforowanych_obrazkow");
 
-function printTblLoadedImgs(){
+function printLoadedImgsTbl(){
   try{
     listOfBufforedImg.innerHTML = "";
     tbl_img.img.forEach( (el) => {
@@ -145,7 +137,7 @@ function printTblLoadedImgs(){
     });
   }
   catch(err){
-    console.log('img.foreach: ', err);
+    console.log('img.foreach err: ', err);
   }
 }
 
@@ -153,17 +145,31 @@ function printTblLoadedImgs(){
 
 
 //function: initlializing loading number images in background
-async function img_load_async(imgIdx, maxLeft, maxRight){  
+async function loadImgsAsync(imgIdx, maxLeft, maxRight){
+  /*
+  return new Promise((resolve, reject) => {
+    const stepR = 1;
+    const stepL = -1;      
+    resolve( () => {
+      loadNextImg(currImgIdx, maxRight, stepR);
+      loadNextImg(currImgIdx, maxLeft, stepL);
+      return 0;
+    });
+    reject(new Error("loadImgsAsync err: nie moge zaladowac obrazka"));
+  });
+  */
   //ignorujemy zwracany niżej promise i wychodzimy bez czekania
-  console.log("img_load_async_STARTED");
+  
+  console.log("loadImgsAsync_STARTED");
   try{
     await imgs_load(imgIdx, maxLeft, maxRight);
   }
   catch(err){
-    console.log('img_load_async: ', {err});
+    console.log('loadImgsAsync: ', {err});
   }
-  console.log("img_load_async_ENDED");
-  return 0;
+  console.log("loadImgsAsync_ENDED");
+  
+  return 0;  
 }
 
 //function: do loading images in background
@@ -171,17 +177,17 @@ async function imgs_load(currImgIdx, maxLeft, maxRight){
   const stepR = 1;
   const stepL = -1;  
   try{
-    load_next_img(currImgIdx, maxRight, stepR);
-    load_next_img(currImgIdx, maxLeft, stepL);  
+    loadNextImg(currImgIdx, maxRight, stepR);
+    loadNextImg(currImgIdx, maxLeft, stepL);  
   }
   catch(err){
-    console.log('imgs_load: ', {err});    
+    console.log('imgs_load err: ', {err});    
   }
   return 0;
 }
 
 //recurrent loading number of images 
-const load_next_img = (curr, maxD, stepD) => { 
+const loadNextImg = (curr, maxD, stepD) => { 
   
   if(maxD <= 0) return;
 
@@ -194,13 +200,13 @@ const load_next_img = (curr, maxD, stepD) => {
   }
   
   if(tbl_img.img[curr][idxLoaded] === 1) {
-    load_next_img(curr, maxD - 1, stepD)
+    loadNextImg(curr, maxD - 1, stepD)
   }
   else{
     console.log("image ", tbl_img.img[curr][idxBig], " start loading");        
     tbl_img.getImg(curr, 'sync')
     .then( (img1) => {
-      //dla celow wizualizacji buforwoania - to nie jest powtarzane w pobierz_img(), bo tu tylko buforowanie      
+      //dla celow wizualizacji buforwoania - to nie jest powtarzane w getImg1(), bo tu tylko buforowanie      
       //a tam wyswietlanie w glownym obrazku
       /* (???) bardzo dziwnie zachowuje sie ten 
          hiddenImgDiv
@@ -210,15 +216,18 @@ const load_next_img = (curr, maxD, stepD) => {
       img1.width = "100";
       img1.height = "100";
       img1.style.maxWidth = "100px"; 
-      img1.style.maxHeight = "100px";       
-      hiddenImgDiv.appendChild(img1);      
+      img1.style.maxHeight = "100px";    
+            
+      hiddenImgDiv.appendChild(img1);  
+      //tbl_img.img[old_img_idx][idxImg] = hiddenImgDiv.firstChild;
+
       //koniec wizualizacji buforowania
-      load_next_img(curr, maxD - 1, stepD);
+      loadNextImg(curr, maxD - 1, stepD);
       console.log("image ", tbl_img.img[curr][idxBig], " loaded");
     })
     .catch((err) => {
-      console.log('load_next_img: ', err);
-      return new Error('load_next_img: nie moge pobrac obrazka');
+      console.log('loadNextImg err: ', err);
+      return new Error('loadNextImg err: nie moge pobrac obrazka');
     })
         
     //https://stackoverflow.com/questions/12354865/image-onload-event-and-browser-cache    
@@ -231,9 +240,10 @@ const load_next_img = (curr, maxD, stepD) => {
 // obsluga testowego htmla
 
 let img_idx = Number(document.getElementById("t_nr_obrazka").value);
+let old_img_idx = null;
 let obrazek = document.getElementById("obrazek");
 
-async function pobierz_img(imgIdx1, decoding='async'){
+async function getImg1(imgIdx1, decoding='async'){
   const pobranyImg = new Promise((resolve, reject) => {    
     tbl_img.getImg(imgIdx1, decoding)
     .then((img_1) => {
@@ -246,18 +256,15 @@ async function pobierz_img(imgIdx1, decoding='async'){
       }
     )
     .catch((err) => {
-      console.log('pobierz_img: ', err);
-      reject(new Error('pobierz_img: nie moge pobrac obrazka'));
+      console.log('getImg1: ', err);
+      reject(new Error('getImg1 err: nie moge pobrac obrazka'));
       }
     )     
   });
-
-
-
   return pobranyImg;
 }
 
-function load_img() {
+function loadImg1() {
   console.log({img_idx});
   let nazwa_obrazka = document.createElement('p');
   nazwa_obrazka.style.fontFamily = "Helvetica";
@@ -266,59 +273,64 @@ function load_img() {
   obrazek.appendChild(nazwa_obrazka);
 
   const img2 = new Promise((resolve, reject) => {      
-    pobierz_img(img_idx, 'sync')
+    getImg1(img_idx, 'sync')
     .then(
       (val) => {resolve(val);}
     ) 
-    .catch( (err) => {resolve(new Error('load_img: nie moge pobrac obrazka'));});
+    .catch( (err) => {reject(new Error('loadImg1 err: nie moge pobrac obrazka'));});
   });
-  img2.then((val) => {
+
+  img2
+  .then((val) => {
     console.log('val: ', val);
+    //if(old_img_idx != null) tbl_img.img[old_img_idx][idxImg] = obrazek.firstChild;
     obrazek.appendChild(val); //TODO: !!!!! problem
+    old_img_idx = img_idx;    
+    return 0;
   })
   .then(
-    () => {img_load_async(img_idx, 2, 2)}
+    () => {loadImgsAsync(img_idx, 2, 2)}
   )
   .catch((err) => {
-    console.log('loag_img: err');
-    resolve(new Error('load_img: 2 - nie moge pobrac obrazka'));
+    console.log('loadImg1: err');
+    reject(new Error('loadImg1 err: 2 - nie moge pobrac obrazka'));
     }
   );
-  console.log("loag_img");     
+  console.log("loadImg1");     
 }
 
 
 function next(){
   img_idx = (tbl_img.img.length -1) == img_idx ? img_idx = 0: img_idx += 1;
   console.log('next: ', img_idx);
-  pobierz_img(img_idx)
-  .then((img1) => {
-    obrazek.replaceChild(img1, obrazek.lastChild);
-  })
-  .catch((err) => {new Error("next: nie moge pobrac obrazka");});
-  obrazek.firstChild.innerHTML = tbl_img.img[img_idx][idx_big];
-  
-  img_load_async(img_idx, 0, 3);  
-  console.log("next");
+  loadNextPrev(img_idx, {leftN:0, rightN:3});
 }
 
 function prev(){  
   img_idx = (0 == img_idx) ? img_idx = (tbl_img.img.length - 1): img_idx -= 1;
   console.log('prev: ', img_idx)
-  pobierz_img(img_idx)
-  .then((img1) => {
-    obrazek.replaceChild(img1, obrazek.lastChild);
-  })
-  .catch((err) => {new Error("next: nie moge pobrac obrazka");});
-  obrazek.firstChild.innerHTML = tbl_img.img[img_idx][idx_big];
-
-  img_load_async(img_idx, 3, 0);        
-  console.log("prev");
+  loadNextPrev(img_idx, {leftN:3, rightN:0});
 }
 
-function getNrObrazka(){
+function loadNextPrev(img_idx, {leftN, rightN}) {
+  getImg1(img_idx)
+  .then((img1) => {
+    //if(old_img_idx != null) tbl_img.img[old_img_idx][idxImg] = obrazek.firstChild;
+    obrazek.replaceChild(img1, obrazek.lastChild);
+    old_img_idx = img_idx;
+  })
+  .catch((err) => {new Error("next: nie moge pobrac obrazka");});
+  
+  obrazek.firstChild.innerHTML = tbl_img.img[img_idx][idx_big];
+
+  loadImgsAsync(img_idx, leftN, rightN);    
+}
+
+function getImgNumber(){
   let nr =  Number(document.getElementById("t_nr_obrazka").value);
   console.log('text.value: :', {nr});
+  old_img_idx = img_idx;
+  //if(old_img_idx != null) tbl_img.img[old_img_idx][idxImg] = obrazek.firstChild;
   img_idx = nr;
   return nr;
 }
