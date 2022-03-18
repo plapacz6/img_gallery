@@ -68,7 +68,7 @@ const tbl_img = {
   ['small_48.png', '48.png', 0, 0],
      
   ], //const tbl_img.img [small (gallery), big (view), obj: obj-img , bool:loaded]
-  long_url : "https://adlap.github.io/Pielgrzymi/images/",
+  long_url : "https://localhost/images/",
 
   loadImg: async function (idx, decoding='async') {
     this.img[idx][idxImg] = document.createElement('img');
